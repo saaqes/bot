@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NovaBot — Automatiza tu trading</title>
+<meta name="description" content="Automatiza tu trading y genera ingresos en automático. Desde el primer día sin ningún tipo de experiencia.">
+
+<!--
+  NOVABOT — Réplica en HTML/CSS/JS puro (sin Framer)
+  ─────────────────────────────────────────────────
+  • Los colores/tipografías están centralizados en :root (ajústalos ahí si el original difiere).
+  • Las imágenes y videos apuntan al CDN original (framerusercontent.com).
+    Para producción: descárgalos a /assets y cambia las rutas.
+  • Breakpoints estilo Framer: Desktop ≥1200px · Tablet 810–1199px · Phone ≤809px
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://framerusercontent.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --bg:          #050606;
+  --bg-2:        #0a0c0b;
+  --card:        rgba(255,255,255,.04);
+  --card-hover:  rgba(255,255,255,.07);
+  --line:        rgba(255,255,255,.09);
+  --line-strong: rgba(255,255,255,.18);
+  --text:        #f2f5f3;
+  --muted:       #9ba4a0;
+  --accent:      #2bf67e;
+  --accent-ink:  #04180c;
+  --glow:        rgba(43,246,126,.35);
+  --radius:      22px;
+  --radius-lg:   28px;
+  --font-display:'Archivo', system-ui, sans-serif;
+  --font-body:   'Inter', system-ui, sans-serif;
+  --ease:        cubic-bezier(.22,1,.36,1);
+  --section-pad: clamp(4.5rem, 9vw, 8rem);
+}
+
+/* ============ RESET / BASE ============ */
+*,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
+html{ scroll-behavior:smooth; }
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+img,video{ display:block; max-width:100%; }
+a{ color:inherit; text-decoration:none; }
+button{ font:inherit; color:inherit; background:none; border:0; cursor:pointer; }
+::selection{ background:var(--accent); color:var(--accent-ink); }
+:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; border-radius:6px; }
+
+.container{ width:min(1200px, 92%); margin-inline:auto; }
+.container.narrow{ max-width:860px; }
+.center{ text-align:center; }
+
+h1,h2,h3,.cta-mega{
+  font-family:var(--font-display);
+  letter-spacing:-.02em;
+  line-height:1.08;
+  text-wrap:balance;
+}
+h2{ font-size:clamp(1.9rem, 4vw, 3.1rem); font-weight:800; }
+h3{ font-size:clamp(1.15rem, 2vw, 1.45rem); font-weight:700; }
+.accent{ color:var(--accent); }
+.section{ padding-block:var(--section-pad); position:relative; }
+
+/* ============ REVEAL ON SCROLL ============ */
+.reveal{
+  opacity:0;
+  transform:translateY(30px);
+  transition:opacity .9s ease, transform .9s var(--ease);
+  transition-delay:var(--d, 0s);
+  will-change:opacity, transform;
+}
+.reveal.in{ opacity:1; transform:none; }
+
+/* ============ BOTONES ============ */
+.btn{
+  display:inline-flex; align-items:center; gap:.7rem;
+  padding:1.05rem 2.3rem;
+  border-radius:999px;
+  background:var(--accent);
+  color:var(--accent-ink);
+  font-weight:800; font-size:.85rem;
+  letter-spacing:.14em; text-transform:uppercase;
+  box-shadow:0 0 0 0 var(--glow);
+  transition:transform .4s var(--ease), box-shadow .4s ease, background .3s ease;
+}
+.btn svg{ width:16px; height:16px; transition:transform .35s var(--ease); }
+.btn:hover{
+  transform:translateY(-3px) scale(1.03);
+  box-shadow:0 12px 40px -6px var(--glow), 0 0 0 6px rgba(43,246,126,.12);
+}
+.btn:hover svg{ transform:translateX(4px); }
+.btn:active{ transform:translateY(0) scale(.98); }
+
+/* ============ HERO ============ */
+.hero{
+  position:relative;
+  isolation:isolate;
+  min-height:100svh;
+  display:grid; place-items:center;
+  text-align:center;
+  padding-block:clamp(6rem, 12vh, 9rem) clamp(4rem, 8vh, 6rem);
+  overflow:hidden;
+}
+.hero-bg{ position:absolute; inset:-8% 0; z-index:-2; }
+.hero-bg img{ width:100%; height:100%; object-fit:cover; object-position:center; will-change:transform; }
+.hero-overlay{
+  position:absolute; inset:0; z-index:-1;
+  background:
+    radial-gradient(60% 50% at 50% 0%, rgba(43,246,126,.10), transparent 70%),
+    linear-gradient(180deg, rgba(5,6,6,.55) 0%, rgba(5,6,6,.72) 55%, var(--bg) 100%);
+}
+.hero-inner{ display:flex; flex-direction:column; align-items:center; gap:clamp(1.4rem, 3vh, 2rem); }
+
+.users-pill{
+  display:inline-flex; align-items:center; gap:.9rem;
+  padding:.45rem 1.2rem .45rem .5rem;
+  border:1px solid var(--line-strong);
+  border-radius:999px;
+  background:rgba(255,255,255,.06);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+}
+.users-pill span{
+  font-size:.78rem; font-weight:700; letter-spacing:.22em; text-transform:uppercase;
+}
+.avatars{ display:flex; }
+.avatars img{
+  width:38px; height:38px; border-radius:50%;
+  object-fit:cover;
+  border:2px solid #0d1210;
+  margin-left:-11px;
+  transition:transform .3s var(--ease);
+}
+.avatars img:first-child{ margin-left:0; }
+.users-pill:hover .avatars img{ transform:translateY(-3px); }
+.users-pill:hover .avatars img:nth-child(2){ transition-delay:.04s; }
+.users-pill:hover .avatars img:nth-child(3){ transition-delay:.08s; }
+.users-pill:hover .avatars img:nth-child(4){ transition-delay:.12s; }
+.users-pill:hover .avatars img:nth-child(5){ transition-delay:.16s; }
+
+.hero h1{
+  font-size:clamp(2.35rem, 6vw, 4.6rem);
+  font-weight:900;
+  letter-spacing:-.03em;
+  max-width:920px;
+}
+.hero-sub{
+  font-size:clamp(1rem, 1.6vw, 1.25rem);
+  color:var(--muted);
+  max-width:560px;
+}
+
+/* Video (YouTube facade) */
+.video-frame{
+  position:relative;
+  width:min(880px, 100%);
+  aspect-ratio:16/9;
+  border-radius:var(--radius);
+  overflow:hidden;
+  border:1px solid var(--line-strong);
+  background:#000;
+  box-shadow:0 30px 80px -20px rgba(0,0,0,.8), 0 0 60px -10px rgba(43,246,126,.18);
+}
+.yt-facade{ position:absolute; inset:0; width:100%; height:100%; display:grid; place-items:center; }
+.yt-facade img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transition:transform .6s var(--ease), opacity .4s; }
+.yt-facade::after{ content:""; position:absolute; inset:0; background:rgba(0,0,0,.28); transition:background .3s; }
+.yt-facade:hover img{ transform:scale(1.04); }
+.yt-facade:hover::after{ background:rgba(0,0,0,.15); }
+.play-btn{
+  position:relative; z-index:2;
+  width:clamp(64px, 9vw, 88px); aspect-ratio:1;
+  border-radius:50%;
+  background:var(--accent);
+  display:grid; place-items:center;
+  transition:transform .35s var(--ease);
+}
+.play-btn::before{
+  content:""; position:absolute; inset:-10px;
+  border-radius:50%; border:1px solid var(--accent);
+  opacity:.6; animation:pulse 2.2s ease-out infinite;
+}
+@keyframes pulse{
+  0%{ transform:scale(.8); opacity:.7; }
+  100%{ transform:scale(1.5); opacity:0; }
+}
+.play-btn svg{ width:34%; height:34%; fill:var(--accent-ink); margin-left:6%; }
+.yt-facade:hover .play-btn{ transform:scale(1.1); }
+.video-frame iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+
+/* ============ COMUNIDAD ============ */
+.section-head{ max-width:820px; margin:0 auto clamp(2.5rem,5vw,4rem); text-align:center; }
+.section-head h2 .muted{ color:var(--muted); }
+.section-head p{ margin-top:1rem; color:var(--muted); font-size:clamp(.95rem,1.4vw,1.1rem); }
+
+.media-card{
+  border-radius:var(--radius-lg);
+  overflow:hidden;
+  border:1px solid var(--line);
+  box-shadow:0 40px 100px -30px rgba(0,0,0,.8);
+}
+.media-card img{ width:100%; height:auto; transition:transform 1.2s var(--ease); }
+.media-card:hover img{ transform:scale(1.03); }
+
+.feature-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
+  gap:1.2rem;
+  margin-top:1.2rem;
+}
+.feature-card{
+  padding:1.8rem;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:linear-gradient(180deg, var(--card), rgba(255,255,255,.015));
+  transition:transform .5s var(--ease), border-color .4s, background .4s;
+}
+.feature-card:hover{
+  transform:translateY(-6px);
+  border-color:rgba(43,246,126,.4);
+  background:linear-gradient(180deg, var(--card-hover), rgba(255,255,255,.02));
+}
+.icon-chip{
+  width:50px; height:50px;
+  display:grid; place-items:center;
+  border-radius:14px;
+  background:rgba(43,246,126,.1);
+  border:1px solid rgba(43,246,126,.28);
+  margin-bottom:1.1rem;
+}
+.icon-chip svg{ width:24px; height:24px; stroke:var(--accent); fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.feature-card h3{ margin-bottom:.45rem; }
+.feature-card p{ color:var(--muted); font-size:.95rem; }
+
+/* ============ RESULTADOS (marquee) ============ */
+.resultados h2{ margin-bottom:clamp(2.5rem,5vw,3.8rem); }
+.marquee{
+  overflow:hidden;
+  cursor:grab;
+  touch-action:pan-y;
+  -webkit-mask-image:linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+          mask-image:linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+  user-select:none;
+  -webkit-user-select:none;
+}
+.marquee.dragging{ cursor:grabbing; }
+.marquee-track{
+  display:flex; gap:1.2rem;
+  width:max-content;
+  will-change:transform;
+  padding-block:.5rem;
+}
+.shot{
+  width:clamp(185px, 21vw, 250px);
+  aspect-ratio:590/1280;
+  border-radius:18px;
+  overflow:hidden;
+  border:1px solid var(--line);
+  background:var(--bg-2);
+  flex-shrink:0;
+  transition:transform .5s var(--ease), border-color .4s;
+}
+.shot img{ width:100%; height:100%; object-fit:cover; pointer-events:none; }
+.shot:hover{ transform:translateY(-8px); border-color:var(--line-strong); }
+
+.marquee-nav{
+  display:flex; justify-content:center; gap:.9rem;
+  margin-top:2.2rem;
+}
+.nav-btn{
+  width:54px; height:54px;
+  border-radius:50%;
+  border:1px solid var(--line-strong);
+  background:rgba(255,255,255,.05);
+  display:grid; place-items:center;
+  transition:background .3s, border-color .3s, transform .3s var(--ease);
+}
+.nav-btn svg{ width:20px; height:20px; stroke:var(--text); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; transition:stroke .3s; }
+.nav-btn:hover{ background:var(--accent); border-color:var(--accent); transform:scale(1.08); }
+.nav-btn:hover svg{ stroke:var(--accent-ink); }
+
+/* ============ QUOTE ============ */
+.quote-card{
+  position:relative;
+  border-radius:var(--radius-lg);
+  overflow:hidden;
+  min-height:clamp(420px, 70vh, 640px);
+  display:grid; place-items:center;
+  border:1px solid var(--line);
+  isolation:isolate;
+}
+.quote-card video{
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; z-index:-2;
+}
+.quote-card::after{
+  content:""; position:absolute; inset:0; z-index:-1;
+  background:linear-gradient(180deg, rgba(3,5,4,.35), rgba(3,5,4,.75));
+}
+.quote-content{
+  text-align:center;
+  padding:2rem;
+  display:flex; flex-direction:column; align-items:center; gap:1.8rem;
+}
+.quote-content blockquote{
+  font-family:var(--font-display);
+  font-size:clamp(1.5rem, 3.6vw, 2.8rem);
+  font-weight:800;
+  letter-spacing:-.02em;
+  line-height:1.15;
+  max-width:20ch;
+}
+.quote-logo{ height:34px; width:auto; opacity:.95; }
+
+/* ============ BENEFICIOS ============ */
+.beneficios h2{ margin-bottom:clamp(2.5rem,5vw,4rem); }
+.benefit-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:1.2rem;
+}
+.benefit-card{
+  padding:clamp(1.8rem, 3vw, 2.6rem);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:linear-gradient(180deg, var(--card), rgba(255,255,255,.015));
+  transition:transform .5s var(--ease), border-color .4s, box-shadow .5s;
+}
+.benefit-card:hover{
+  transform:translateY(-6px);
+  border-color:rgba(43,246,126,.4);
+  box-shadow:0 25px 60px -25px rgba(43,246,126,.25);
+}
+.benefit-card h3{ font-size:clamp(1.25rem, 2vw, 1.6rem); margin-bottom:.5rem; }
+.benefit-card p{ color:var(--muted); }
+
+/* ============ OFERTA ============ */
+.oferta h2.title{ margin-bottom:clamp(2.2rem, 4vw, 3.2rem); }
+.oferta-claim{
+  margin:clamp(2.2rem,4vw,3.2rem) auto clamp(1.8rem,3vw,2.4rem);
+  max-width:900px;
+  text-align:center;
+  font-size:clamp(1.4rem, 2.8vw, 2.2rem);
+  font-weight:700;
+}
+.oferta .cta-wrap{ display:flex; justify-content:center; }
+
+/* ============ FAQ ============ */
+.faq h2{ margin-bottom:clamp(2.2rem,4vw,3.2rem); }
+.faq-list{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:var(--card);
+  overflow:hidden;
+}
+.faq-item + .faq-item{ border-top:1px solid var(--line); }
+.faq-q{
+  width:100%;
+  display:flex; align-items:center; justify-content:space-between; gap:1rem;
+  padding:1.35rem 1.6rem;
+  text-align:left;
+  font-family:var(--font-display);
+  font-size:clamp(1rem, 1.6vw, 1.15rem);
+  font-weight:700;
+  transition:background .3s, color .3s;
+}
+.faq-q:hover{ background:rgba(255,255,255,.03); }
+.faq-item.open .faq-q{ color:var(--accent); }
+.chev{ flex-shrink:0; width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; transition:transform .45s var(--ease); }
+.faq-item.open .chev{ transform:rotate(180deg); }
+.faq-a{
+  display:grid;
+  grid-template-rows:0fr;
+  transition:grid-template-rows .5s var(--ease);
+}
+.faq-item.open .faq-a{ grid-template-rows:1fr; }
+.faq-a-inner{ overflow:hidden; }
+.faq-a-inner p{
+  padding:0 1.6rem 1.5rem;
+  color:var(--muted);
+  max-width:64ch;
+}
+
+/* ============ CTA FINAL ============ */
+.cta-final{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  padding-block:clamp(6rem, 14vh, 10rem);
+  text-align:center;
+}
+.cta-final video{
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; z-index:-2;
+}
+.cta-final::after{
+  content:""; position:absolute; inset:0; z-index:-1;
+  background:
+    linear-gradient(180deg, var(--bg) 0%, rgba(5,6,6,.62) 22%, rgba(5,6,6,.72) 78%, var(--bg) 100%);
+}
+.cta-inner{ display:flex; flex-direction:column; align-items:center; gap:clamp(1.6rem,3vh,2.4rem); }
+.cta-mega{
+  font-size:clamp(2.9rem, 11vw, 8.2rem);
+  font-weight:900;
+  text-transform:uppercase;
+  line-height:.94;
+  letter-spacing:-.02em;
+  text-shadow:0 10px 60px rgba(0,0,0,.6);
+}
+.cta-mega span{ display:block; }
+.cta-final h3{
+  max-width:640px;
+  font-weight:600;
+  color:rgba(242,245,243,.92);
+  font-size:clamp(1.05rem, 1.8vw, 1.35rem);
+  line-height:1.5;
+}
+
+/* ============ MEDIA QUERIES (breakpoints Framer) ============ */
+/* Tablet: 810–1199px */
+@media (max-width:1199px){
+  .hero h1{ max-width:760px; }
+  .benefit-grid{ gap:1rem; }
+}
+
+/* Phone: ≤809px */
+@media (max-width:809px){
+  .container{ width:90%; }
+  .hero{ min-height:100svh; padding-top:5.5rem; }
+  .users-pill span{ font-size:.68rem; letter-spacing:.16em; }
+  .avatars img{ width:32px; height:32px; margin-left:-10px; }
+  .benefit-grid{ grid-template-columns:1fr; }
+  .feature-grid{ grid-template-columns:1fr; }
+  .quote-card{ min-height:70vh; }
+  .quote-content blockquote{ max-width:14ch; }
+  .faq-q{ padding:1.15rem 1.15rem; }
+  .faq-a-inner p{ padding:0 1.15rem 1.25rem; }
+  .marquee-nav{ margin-top:1.6rem; }
+  .nav-btn{ width:48px; height:48px; }
+  .btn{ padding:1rem 1.8rem; font-size:.78rem; }
+  .cta-final{ padding-block:5rem; }
+}
+
+/* ============ REDUCED MOTION ============ */
+@media (prefers-reduced-motion: reduce){
+  html{ scroll-behavior:auto; }
+  .reveal{ opacity:1; transform:none; transition:none; }
+  .play-btn::before{ animation:none; }
+  *{ transition-duration:.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ HERO ══════════════════ -->
+<header class="hero">
+  <div class="hero-bg" data-parallax>
+    <img src="https://framerusercontent.com/images/nEMbTwxuXlvP2DUsSmpSxURO8.jpg" alt="" fetchpriority="high">
+  </div>
+  <div class="hero-overlay"></div>
+
+  <div class="container hero-inner">
+
+    <div class="users-pill reveal" style="--d:.05s">
+      <div class="avatars">
+        <img src="https://framerusercontent.com/images/MyRRldqNaAbqEiT4o9EwdVWXsY.png" alt="Usuario">
+        <img src="https://framerusercontent.com/images/Q5y9QXuJHSLLfiWL0kjAEX5uz3o.png" alt="Usuario">
+        <img src="https://framerusercontent.com/images/1IvNRKHWftJ9DzL4XCRlwAZM.png" alt="Usuario">
+        <img src="https://framerusercontent.com/images/zmR5BdcDXzrlyFHgmDBtdwcx8w.png" alt="Usuario">
+        <img src="https://framerusercontent.com/images/FWic0vs2eEgBenXXWFqdRhoMI.png" alt="Usuario">
+      </div>
+      <span>+400 Usuarios</span>
+    </div>
+
+    <h1 class="reveal" style="--d:.15s">Automatiza tu trading y genera ingresos en automático</h1>
+
+    <p class="hero-sub reveal" style="--d:.25s">Desde el primer día sin ningún tipo de experiencia, todo en automático</p>
+
+    <div class="video-frame reveal" style="--d:.35s">
+      <button class="yt-facade" type="button" aria-label="Reproducir video">
+        <img src="https://i.ytimg.com/vi_webp/WY38nVOYmwk/maxresdefault.webp" alt="Video de presentación">
+        <span class="play-btn" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </span>
+      </button>
+    </div>
+
+    <a class="btn reveal" style="--d:.45s" href="https://wa.link/q3mqs0" target="_blank" rel="noopener">
+      Más información
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+    </a>
+
+  </div>
+</header>
+
+<!-- ══════════════════ COMUNIDAD ══════════════════ -->
+<section class="section comunidad">
+  <div class="container">
+
+    <div class="section-head reveal">
+      <h2>Tecnología que trabaja por ti. <span class="muted">Comunidad que crece contigo.</span></h2>
+      <p>Nos encargamos del diseño y marketing para que tu marca crezca sin complicaciones.</p>
+    </div>
+
+    <figure class="media-card reveal">
+      <img src="https://framerusercontent.com/images/zjBDlducUWOygTWWqHZJm4YTi8.jpg?scale-down-to=1024&width=1284&height=806" alt="Comunidad NovaBot" loading="lazy">
+    </figure>
+
+    <div class="feature-grid">
+      <article class="feature-card reveal" style="--d:.05s">
+        <div class="icon-chip" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h3>Comunidad &amp; respaldo</h3>
+        <p>Estrategia, datos y resultados, todo en una sola comunidad.</p>
+      </article>
+
+      <article class="feature-card reveal" style="--d:.15s">
+        <div class="icon-chip" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3>Gestión de riesgo</h3>
+        <p>Stop-loss, Take-profit para tu tranquilidad.</p>
+      </article>
+
+      <article class="feature-card reveal" style="--d:.25s">
+        <div class="icon-chip" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
+        </div>
+        <h3>Múltiples estrategias</h3>
+        <p>Scalping, Swing, tendencia y más.</p>
+      </article>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════ RESULTADOS ══════════════════ -->
+<section class="section resultados">
+  <div class="container">
+    <h2 class="center reveal">Confianza construida con resultados</h2>
+  </div>
+
+  <div class="marquee reveal" data-marquee>
+    <div class="marquee-track">
+      <figure class="shot"><img src="https://framerusercontent.com/images/FfMrnIaGVmaom0LX7ZG4woBB8oc.jpeg?scale-down-to=1024" alt="Resultado de usuario" loading="lazy"></figure>
+      <figure class="shot"><img src="https://framerusercontent.com/images/BwQsOdzpiZGT4pSW7drSelpPPo.jpeg?scale-down-to=1024" alt="Resultado de usuario" loading="lazy"></figure>
+      <figure class="shot"><img src="https://framerusercontent.com/images/evdWtv9NosLud62gAt13cMTbNY.jpeg?scale-down-to=1024" alt="Resultado de usuario" loading="lazy"></figure>
+      <figure class="shot"><img src="https://framerusercontent.com/images/zM1u4di0Yr8xjoaMokUH2OOpsM.jpeg?scale-down-to=1024" alt="Resultado de usuario" loading="lazy"></figure>
+      <figure class="shot"><img src="https://framerusercontent.com/images/2eGVCOERV56Qs1vr3pxHCSngY.jpeg?scale-down-to=1024" alt="Resultado de usuario" loading="lazy"></figure>
+      <figure class="shot"><img src="https://framerusercontent.com/images/ho0ltii74m9iwphc1KOvvvSYasM.jpeg?scale-down-to=1024" alt="Resultado de usuario" loading="lazy"></figure>
+      <figure class="shot"><img src="https://framerusercontent.com/images/ccXXGjAyAWUgorjcK7Lf1PEut7g.jpeg?scale-down-to=1024" alt="Resultado de usuario" loading="lazy"></figure>
+    </div>
+  </div>
+
+  <div class="container marquee-nav">
+    <button class="nav-btn" type="button" data-dir="-1" aria-label="Anterior">
+      <svg viewBox="0 0 24 24"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg>
+    </button>
+    <button class="nav-btn" type="button" data-dir="1" aria-label="Siguiente">
+      <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+    </button>
+  </div>
+</section>
+
+<!-- ══════════════════ QUOTE ══════════════════ -->
+<section class="section quote">
+  <div class="container">
+    <div class="quote-card reveal">
+      <video src="https://framerusercontent.com/assets/Ji57Ag3HAMoPzUpO2zO0v93mBqg.mp4" autoplay muted loop playsinline></video>
+      <div class="quote-content">
+        <blockquote>“El futuro del trading no es humano... es inteligente.”</blockquote>
+        <img class="quote-logo" src="https://framerusercontent.com/images/0MNUi2mTOBgb5ojhEKBf1jZ8U.svg?width=176&height=40" alt="NovaBot" loading="lazy">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ BENEFICIOS ══════════════════ -->
+<section class="section beneficios">
+  <div class="container">
+    <h2 class="center reveal">Beneficios de nuestro bot de trading</h2>
+
+    <div class="benefit-grid">
+      <article class="benefit-card reveal" style="--d:.05s">
+        <div class="icon-chip" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>
+        </div>
+        <h3>Rentabilidad comprobada</h3>
+        <p>Efectividad del 90%, cero emociones, solo decisiones inteligentes</p>
+      </article>
+
+      <article class="benefit-card reveal" style="--d:.12s">
+        <div class="icon-chip" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+        </div>
+        <h3>Rápida ejecución</h3>
+        <p>Operaciones en menos de 2 minutos, permitiendo desempeñar otras labores.</p>
+      </article>
+
+      <article class="benefit-card reveal" style="--d:.19s">
+        <div class="icon-chip" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+        </div>
+        <h3>Soporte 24/7</h3>
+        <p>Asistencia técnica siempre disponible.</p>
+      </article>
+
+      <article class="benefit-card reveal" style="--d:.26s">
+        <div class="icon-chip" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <h3>Pago único</h3>
+        <p>Sin mensualidades, ni pagos extras, único pago de por vida</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ OFERTA ══════════════════ -->
+<section class="section oferta">
+  <div class="container">
+    <h2 class="title center reveal">Oferta exclusiva <span class="accent">Por tiempo limitado</span></h2>
+
+    <figure class="media-card reveal">
+      <img src="https://framerusercontent.com/images/28I1T2hRb7ZzfIpDcKeK3slPSY.jpg?scale-down-to=1024&width=1284&height=797" alt="Oferta exclusiva NovaBot" loading="lazy">
+    </figure>
+
+    <h2 class="oferta-claim reveal">Obtén acceso completamente gratis a un sistema de copy trading en sintéticos al adquirir la herramienta</h2>
+
+    <div class="cta-wrap reveal">
+      <a class="btn" href="https://wa.link/q3mqs0" target="_blank" rel="noopener">
+        Quiero acceder
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ FAQ ══════════════════ -->
+<!-- NOTA: las respuestas del acordeón no están publicadas en el HTML del sitio original
+     (van colapsadas). Estas son de ejemplo, coherentes con la página: reemplázalas por las reales. -->
+<section class="section faq">
+  <div class="container narrow">
+    <h2 class="center reveal">Preguntas frecuentes</h2>
+
+    <div class="faq-list reveal">
+
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false">
+          ¿Cómo funciona el bot?
+          <svg class="chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">
+          <p>El bot analiza el mercado en tiempo real y ejecuta operaciones de forma automática según estrategias predefinidas, con gestión de riesgo incluida, sin que tengas que intervenir.</p>
+        </div></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false">
+          ¿Dentro de que mercado opera el bot?
+          <svg class="chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">
+          <p>Opera principalmente en índices sintéticos, un mercado disponible las 24 horas, los 7 días de la semana.</p>
+        </div></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false">
+          ¿Es seguro mi dinero?
+          <svg class="chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">
+          <p>Tus fondos permanecen en tu propia cuenta del bróker. El bot solo ejecuta operaciones con stop-loss y take-profit configurados para proteger tu capital.</p>
+        </div></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false">
+          ¿Requiere mucho tiempo?
+          <svg class="chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">
+          <p>No. La activación toma menos de 15 minutos y a partir de ahí el bot trabaja en automático mientras te dedicas a otras labores.</p>
+        </div></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false">
+          ¿Necesito saber de trading?
+          <svg class="chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">
+          <p>No. Está diseñado para funcionar desde el primer día sin ningún tipo de experiencia, y además cuentas con soporte y una comunidad que te acompaña.</p>
+        </div></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false">
+          ¿Funciona en cualquier dispositivo?
+          <svg class="chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">
+          <p>Sí. Puedes monitorear y usar el sistema tanto desde tu computador como desde tu celular.</p>
+        </div></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ CTA FINAL ══════════════════ -->
+<section class="cta-final">
+  <video src="https://framerusercontent.com/assets/asoGWecS7H7m0tuCoLiFeDg8.mp4" autoplay muted loop playsinline></video>
+
+  <div class="container cta-inner">
+    <p class="cta-mega">
+      <span class="reveal" style="--d:.0s">¡Activa tu</span>
+      <span class="reveal" style="--d:.12s">bot y da el</span>
+      <span class="reveal" style="--d:.24s">primer paso!</span>
+    </p>
+
+    <h3 class="reveal" style="--d:.3s">Activa tu bot de trading en menos de 15 minutos y empieza hoy mismo a generar ingresos pasivos en automático.</h3>
+
+    <a class="btn reveal" style="--d:.4s" href="https://wa.link/q3mqs0" target="_blank" rel="noopener">
+      Da clic para hablar conmigo
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+    </a>
+  </div>
+</section>
+
+<script>
+(function(){
+  'use strict';
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  /* ── Reveal on scroll ─────────────────────────── */
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold:.15, rootMargin:'0px 0px -40px 0px' });
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* ── Parallax sutil del fondo del hero ────────── */
+  const heroBg = document.querySelector('[data-parallax] img');
+  if(heroBg && !reduceMotion.matches){
+    let ticking = false;
+    window.addEventListener('scroll', ()=>{
+      if(ticking) return;
+      ticking = true;
+      requestAnimationFrame(()=>{
+        const y = Math.min(window.scrollY, window.innerHeight);
+        heroBg.style.transform = 'translateY(' + (y * .22) + 'px) scale(1.05)';
+        ticking = false;
+      });
+    }, { passive:true });
+  }
+
+  /* ── YouTube facade (carga el iframe al hacer clic) */
+  const facade = document.querySelector('.yt-facade');
+  if(facade){
+    facade.addEventListener('click', ()=>{
+      const frame = facade.parentElement;
+      const iframe = document.createElement('iframe');
+      iframe.src = 'https://www.youtube.com/embed/WY38nVOYmwk?iv_load_policy=3&rel=0&modestbranding=1&playsinline=1&autoplay=1';
+      iframe.title = 'NovaBot';
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+      iframe.allowFullscreen = true;
+      facade.remove();
+      frame.appendChild(iframe);
+    });
+  }
+
+  /* ── Acordeón FAQ ─────────────────────────────── */
+  document.querySelectorAll('.faq-item').forEach(item=>{
+    const q = item.querySelector('.faq-q');
+    q.addEventListener('click', ()=>{
+      const wasOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item.open').forEach(i=>{
+        i.classList.remove('open');
+        i.querySelector('.faq-q').setAttribute('aria-expanded','false');
+      });
+      if(!wasOpen){
+        item.classList.add('open');
+        q.setAttribute('aria-expanded','true');
+      }
+    });
+  });
+
+  /* ── Marquee de resultados (auto-scroll + flechas + drag) */
+  const marquee = document.querySelector('[data-marquee]');
+  if(marquee){
+    const track = marquee.querySelector('.marquee-track');
+    const items = Array.from(track.children);
+    // Duplicar el contenido para el loop infinito
+    items.forEach(n=>track.appendChild(n.cloneNode(true)));
+    track.querySelectorAll('img').forEach(img=>img.draggable = false);
+
+    let x = 0, target = null, dragging = false, hover = false;
+    let startX = 0, startOffset = 0;
+    const SPEED = 0.55;
+
+    const stepWidth = ()=>{
+      const first = track.children[0];
+      const gap = parseFloat(getComputedStyle(track).gap) || 0;
+      return first.getBoundingClientRect().width + gap;
+    };
+
+    function loop(){
+      const half = track.scrollWidth / 2;
+      if(!dragging){
+        if(target !== null){
+          const d = target - x;
+          x += d * .09;
+          if(Math.abs(d) < .5){ x = target; target = null; }
+        } else if(!hover && !reduceMotion.matches){
+          x -= SPEED;
+        }
+      }
+      if(half > 0){
+        while(x <= -half){ x += half; if(target !== null) target += half; }
+        while(x > 0){ x -= half; if(target !== null) target -= half; }
+      }
+      track.style.transform = 'translate3d(' + x + 'px,0,0)';
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    marquee.addEventListener('mouseenter', ()=>hover = true);
+    marquee.addEventListener('mouseleave', ()=>hover = false);
+
+    marquee.addEventListener('pointerdown', e=>{
+      dragging = true;
+      startX = e.clientX;
+      startOffset = x;
+      target = null;
+      marquee.classList.add('dragging');
+      marquee.setPointerCapture(e.pointerId);
+    });
+    marquee.addEventListener('pointermove', e=>{
+      if(dragging) x = startOffset + (e.clientX - startX);
+    });
+    const endDrag = ()=>{ dragging = false; marquee.classList.remove('dragging'); };
+    marquee.addEventListener('pointerup', endDrag);
+    marquee.addEventListener('pointercancel', endDrag);
+
+    document.querySelectorAll('.nav-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const dir = parseInt(btn.dataset.dir, 10); // -1 = anterior, 1 = siguiente
+        target = (target !== null ? target : x) - dir * stepWidth();
+      });
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
