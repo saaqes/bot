@@ -429,6 +429,97 @@ h3{ font-size:clamp(1.15rem, 2vw, 1.45rem); font-weight:700; }
   line-height:1.5;
 }
 
+/* ============ BORDES NEÓN ANIMADOS ============ */
+/* Cada card tiene un anillo de luz (conic-gradient) girando en su borde.
+   El haz se pausa fuera del viewport (clase .lit vía JS) por rendimiento. */
+@property --spin{ syntax:'<angle>'; inherits:false; initial-value:0deg; }
+@keyframes neon-spin{ to{ --spin:360deg; } }
+
+.feature-card, .benefit-card, .media-card, .video-frame, .quote-card, .shot{
+  position:relative;
+  z-index:0;
+  border:0;
+  background:transparent;
+}
+/* Anillo de luz */
+.feature-card::before, .benefit-card::before, .media-card::before,
+.video-frame::before, .quote-card::before, .shot::before{
+  content:"";
+  position:absolute; inset:0; z-index:-2;
+  border-radius:inherit;
+  background:conic-gradient(from var(--spin),
+    rgba(255,255,255,.13) 0deg 260deg,
+    rgba(43,246,126,.45)  300deg,
+    #d9ffe9               331deg,
+    var(--accent)         338deg,
+    rgba(43,246,126,.45)  350deg,
+    rgba(255,255,255,.13) 360deg);
+  animation:neon-spin 5.5s linear infinite;
+  animation-play-state:paused;
+}
+.lit::before{ animation-play-state:running; }
+.shot:hover::before{ animation-play-state:running; }
+
+/* Superficie interior de las cards de texto (deja visible el anillo de 1.5px) */
+.feature-card::after, .benefit-card::after{
+  content:"";
+  position:absolute; inset:1.5px; z-index:-1;
+  border-radius:calc(var(--radius) - 1.5px);
+  background:linear-gradient(180deg, #0e1311, #080b09);
+  transition:background .4s ease;
+}
+.feature-card:hover, .benefit-card:hover{ background:transparent; }
+.feature-card:hover::after, .benefit-card:hover::after{
+  background:linear-gradient(180deg, #131a16, #0b100d);
+}
+
+/* Desincronizar los haces para que no giren al unísono */
+.feature-grid  > :nth-child(2)::before{ animation-delay:-1.8s; }
+.feature-grid  > :nth-child(3)::before{ animation-delay:-3.6s; }
+.benefit-grid  > :nth-child(2)::before{ animation-delay:-1.4s; }
+.benefit-grid  > :nth-child(3)::before{ animation-delay:-2.8s; }
+.benefit-grid  > :nth-child(4)::before{ animation-delay:-4.2s; }
+.marquee-track > :nth-child(odd)::before{ animation-delay:-2.2s; }
+
+/* Imágenes grandes: el contenido se retrae 2px para dejar ver el anillo */
+.media-card{ padding:2px; }
+.media-card img{ border-radius:calc(var(--radius-lg) - 2px); }
+.media-card:hover img{ transform:none; }
+.media-card:hover{
+  box-shadow:0 40px 100px -30px rgba(0,0,0,.8), 0 0 70px -18px var(--glow);
+}
+
+/* Video del hero */
+.video-frame{
+  box-shadow:0 30px 80px -20px rgba(0,0,0,.8), 0 0 60px -10px rgba(43,246,126,.22);
+}
+.yt-facade{
+  inset:2px; width:calc(100% - 4px); height:calc(100% - 4px);
+  border-radius:calc(var(--radius) - 2px);
+  overflow:hidden;
+  background:#000;
+}
+.video-frame iframe{
+  inset:2px; width:calc(100% - 4px); height:calc(100% - 4px);
+  border-radius:calc(var(--radius) - 2px);
+}
+
+/* Quote: video y overlay retraídos para no tapar el anillo */
+.quote-card video, .quote-card::after{
+  inset:2px; width:calc(100% - 4px); height:calc(100% - 4px);
+  border-radius:calc(var(--radius-lg) - 2px);
+}
+
+/* Capturas del marquee */
+.shot{ padding:2px; overflow:visible; }
+.shot img{ border-radius:16px; }
+
+/* FAQ: borde neón estático + glow suave */
+.faq-list{
+  border-color:rgba(43,246,126,.25);
+  box-shadow:0 0 60px -24px var(--glow);
+}
+
 /* ============ MEDIA QUERIES (breakpoints Framer) ============ */
 /* Tablet: 810–1199px */
 @media (max-width:1199px){
@@ -459,6 +550,8 @@ h3{ font-size:clamp(1.15rem, 2vw, 1.45rem); font-weight:700; }
   html{ scroll-behavior:auto; }
   .reveal{ opacity:1; transform:none; transition:none; }
   .play-btn::before{ animation:none; }
+  .feature-card::before, .benefit-card::before, .media-card::before,
+  .video-frame::before, .quote-card::before, .shot::before{ animation:none; }
   *{ transition-duration:.01ms !important; }
 }
 </style>
@@ -755,6 +848,13 @@ h3{ font-size:clamp(1.15rem, 2vw, 1.45rem); font-weight:700; }
     });
   }, { threshold:.15, rootMargin:'0px 0px -40px 0px' });
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* ── Luces neón: activar el haz solo cuando la card está en pantalla */
+  const neonIO = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>e.target.classList.toggle('lit', e.isIntersecting));
+  }, { rootMargin:'100px' });
+  document.querySelectorAll('.feature-card, .benefit-card, .media-card, .video-frame, .quote-card')
+    .forEach(el=>neonIO.observe(el));
 
   /* ── Parallax sutil del fondo del hero ────────── */
   const heroBg = document.querySelector('[data-parallax] img');
