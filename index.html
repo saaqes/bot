@@ -226,6 +226,27 @@ h3{ font-size:clamp(1.15rem, 2vw, 1.45rem); font-weight:700; }
 .video-toggle:hover::after{ transform:scale(1.06); }
 .video-frame + .video-frame{ margin-top:1.2rem; }
 
+/* Indicador de audio activo (aparece en el video enfocado por el usuario) */
+.video-frame,
+.media-video{ position:relative; }
+.video-frame::after,
+.media-video::after{
+  content:"";
+  position:absolute;
+  top:10px; right:10px;
+  width:34px; height:34px;
+  border-radius:999px;
+  background:rgba(4,24,12,.72) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232bf67e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M11 5 6 9H2v6h4l5 4V5z'/><path d='M15.54 8.46a5 5 0 0 1 0 7.07'/><path d='M19.07 4.93a10 10 0 0 1 0 14.14'/></svg>") center/16px no-repeat;
+  border:1px solid rgba(43,246,126,.5);
+  box-shadow:0 0 18px -2px var(--glow);
+  z-index:3;
+  opacity:0; transform:scale(.7);
+  pointer-events:none;
+  transition:opacity .35s ease, transform .35s var(--ease);
+}
+.video-frame.has-audio::after,
+.media-video.has-audio::after{ opacity:1; transform:scale(1); }
+
 /* Layout de la pareja de teléfonos (hero y "cómo funciona") */
 .phone-pair{
   display:grid;
@@ -1124,7 +1145,85 @@ h3{ font-size:clamp(1.15rem, 2vw, 1.45rem); font-weight:700; }
         '*'
       );
       btn.classList.toggle('paused', paused);
+      /* Marca el wrapper como pausado manualmente para que el
+         audio-focus lo ignore mientras esté detenido */
+      btn.parentElement.classList.toggle('user-paused', paused);
+      if(typeof window.refreshAudioFocus === 'function') window.refreshAudioFocus();
     });
+  });
+
+  /* ── Audio focus ─────────────────────────────────
+     Activa el audio SOLO del video más cercano al centro
+     del viewport (con ≥50% visible). Al scrollear, el audio
+     salta al siguiente. Al iniciar la página todos van mute
+     y se activa el primer video visible tras un breve delay.
+     Si el usuario pausó un video manualmente, se omite. */
+  const audioIframes = Array.from(
+    document.querySelectorAll('.video-frame iframe, .media-video iframe')
+  );
+  let activeAudio = null;
+
+  function ytCmd(iframe, func, args){
+    try{
+      iframe.contentWindow.postMessage(
+        JSON.stringify({event:'command', func, args: args || []}),
+        '*'
+      );
+    }catch(e){}
+  }
+
+  function setAudio(iframe){
+    if(activeAudio === iframe) return;
+    if(activeAudio){
+      ytCmd(activeAudio, 'mute');
+      const prevWrap = activeAudio.closest('.video-frame,.media-video');
+      if(prevWrap) prevWrap.classList.remove('has-audio');
+    }
+    activeAudio = iframe;
+    if(iframe){
+      ytCmd(iframe, 'unMute');
+      ytCmd(iframe, 'setVolume', [80]);
+      const wrap = iframe.closest('.video-frame,.media-video');
+      if(wrap) wrap.classList.add('has-audio');
+    }
+  }
+
+  function pickActiveVideo(){
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    const cy = vh / 2;
+    let best = null, bestDist = Infinity;
+    audioIframes.forEach(f => {
+      const wrap = f.closest('.video-frame,.media-video');
+      if(!wrap || wrap.classList.contains('user-paused')) return;
+      const r = f.getBoundingClientRect();
+      if(r.height <= 0) return;
+      const visibleH = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0));
+      /* Requiere ≥50% del video visible en pantalla */
+      if(visibleH < r.height * 0.5) return;
+      const iCy = r.top + r.height / 2;
+      const d = Math.abs(iCy - cy);
+      if(d < bestDist){ bestDist = d; best = f; }
+    });
+    setAudio(best);
+  }
+  window.refreshAudioFocus = pickActiveVideo;
+
+  let audioRAF = null;
+  function scheduleAudioPick(){
+    if(audioRAF) return;
+    audioRAF = requestAnimationFrame(()=>{ audioRAF = null; pickActiveVideo(); });
+  }
+  window.addEventListener('scroll', scheduleAudioPick, {passive:true});
+  window.addEventListener('resize', scheduleAudioPick, {passive:true});
+
+  /* Espera a que YouTube esté listo tras el autoplay muted inicial */
+  setTimeout(pickActiveVideo, 500);
+  setTimeout(pickActiveVideo, 1500);
+
+  /* Red de seguridad para autoplay policies: el primer gesto del
+     usuario re-dispara el audio del video visible */
+  ['click','touchstart','keydown'].forEach(evt=>{
+    window.addEventListener(evt, ()=>setTimeout(pickActiveVideo, 60), {once:true, passive:true, capture:true});
   });
 
   /* ── Acordeón FAQ ─────────────────────────────── */
