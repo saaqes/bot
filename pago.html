@@ -1,0 +1,1134 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050606">
+<title>Pago seguro · NovaBot</title>
+<meta name="description" content="Página de pago autorizada para NovaBot. PSE, tarjeta débito/crédito, Nequi, Daviplata o comprobante manual.">
+
+<!-- ==========================================================
+     CONFIGURACIÓN — EDITA ESTOS VALORES
+     ========================================================== -->
+<script>
+window.CONFIG = {
+  /* Producto */
+  producto: {
+    nombre: 'NovaBot Trading Bot',
+    descripcion: 'Bot de trading automatizado + capacitación',
+    precioCOP: 100000            // Precio en pesos colombianos (sin decimales)
+  },
+
+  /* ---- WOMPI (recomendado para Colombia) ----
+     1) Regístrate en https://comercios.wompi.co
+     2) Vincula tu cuenta bancaria
+     3) Del panel copia estos dos valores: */
+  wompi: {
+    llavePublica: 'pub_prod_TU_LLAVE_PUBLICA_AQUI',
+    llaveIntegridad: 'prod_integrity_TU_LLAVE_DE_INTEGRIDAD_AQUI',
+    urlRedireccion: 'https://TU_DOMINIO.com/entrega.html'   // Página de "gracias" tras pago
+  },
+
+  /* ---- MERCADO PAGO (alternativa) ----
+     Si prefieres MP: crea un "Link de pago" fijo en tu panel de Mercado Pago
+     y pega la URL aquí. Si dejas esto vacío, se usa Wompi por defecto. */
+  mercadoPagoLinkPago: '',   // ej: 'https://mpago.la/xxxxx'
+
+  /* ---- COMPROBANTE MANUAL ---- */
+  formSubmitEmail: 'tucorreo@ejemplo.com',   // Tu correo para recibir comprobantes (via formsubmit.co)
+  whatsappNumero: '573052430458',            // Sin +, sin espacios
+  cuentasRecepcion: {
+    bancolombia: {
+      titular: 'David Hurtado',
+      tipo: 'Ahorros',
+      numero: '000-000000-00'
+    },
+    nequi:      { titular: 'David Hurtado', numero: '305 243 0458' },
+    daviplata:  { titular: 'David Hurtado', numero: '305 243 0458' }
+  }
+};
+</script>
+
+<style>
+/* ============ Tokens de diseño ============ */
+:root{
+  --bg:#050606;
+  --bg-soft:#0a0d0c;
+  --panel:rgba(255,255,255,.03);
+  --panel-hover:rgba(255,255,255,.05);
+  --border:rgba(255,255,255,.08);
+  --border-strong:rgba(255,255,255,.14);
+  --text:#f2f5f3;
+  --muted:#9ba4a0;
+  --accent:#2bf67e;
+  --accent-ink:#04180c;
+  --glow:rgba(43,246,126,.35);
+  --danger:#ff5c5c;
+  --radius:14px;
+  --radius-lg:22px;
+  --shadow:0 30px 80px -20px rgba(0,0,0,.7);
+  --ease:cubic-bezier(.16,1,.3,1);
+  --font: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif;
+}
+
+*,*::before,*::after{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; }
+body{
+  font-family:var(--font);
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+body::before{
+  content:"";
+  position:fixed; inset:0;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(43,246,126,.06), transparent 50%),
+    radial-gradient(circle at 90% 90%, rgba(43,246,126,.04), transparent 50%);
+  pointer-events:none;
+  z-index:0;
+}
+
+img,svg{ display:block; max-width:100%; }
+button{ font:inherit; cursor:pointer; }
+input,select,textarea{ font:inherit; color:inherit; }
+a{ color:var(--accent); text-decoration:none; }
+
+/* ============ Header ============ */
+.site-header{
+  position:relative; z-index:2;
+  padding:1.4rem clamp(1rem, 4vw, 3rem);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid var(--border);
+  background:rgba(5,6,6,.75);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+}
+.brand{
+  display:flex; align-items:center; gap:.6rem;
+  font-weight:700; font-size:1.05rem; letter-spacing:.02em;
+}
+.brand-mark{
+  width:34px; height:34px;
+  border-radius:10px;
+  background:var(--accent);
+  display:grid; place-items:center;
+  color:var(--accent-ink);
+  font-weight:900;
+  box-shadow:0 8px 24px -6px var(--glow);
+}
+.secure-badge{
+  display:inline-flex; align-items:center; gap:.5rem;
+  padding:.5rem .9rem;
+  border-radius:999px;
+  background:var(--panel);
+  border:1px solid var(--border);
+  font-size:.78rem;
+  color:var(--muted);
+  letter-spacing:.02em;
+}
+.secure-badge svg{ width:15px; height:15px; color:var(--accent); }
+
+/* ============ Layout principal ============ */
+.wrap{
+  position:relative; z-index:1;
+  max-width:1120px;
+  margin:0 auto;
+  padding:clamp(1.5rem, 4vw, 3rem) clamp(1rem, 4vw, 2rem) 5rem;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);
+  gap:2rem;
+}
+@media (max-width:860px){
+  .wrap{ grid-template-columns:1fr; gap:1.5rem; }
+}
+
+/* ============ Panel resumen del producto ============ */
+.summary{
+  align-self:start;
+  position:sticky; top:1.5rem;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:1.8rem 1.6rem;
+  box-shadow:var(--shadow);
+}
+@media (max-width:860px){ .summary{ position:static; } }
+.summary h2{
+  margin:0 0 1.2rem;
+  font-size:.72rem;
+  text-transform:uppercase;
+  letter-spacing:.16em;
+  color:var(--muted);
+  font-weight:600;
+}
+.product{
+  display:flex;
+  gap:1rem;
+  align-items:flex-start;
+  padding-bottom:1.4rem;
+  border-bottom:1px dashed var(--border);
+  margin-bottom:1.4rem;
+}
+.product-thumb{
+  width:64px; height:64px;
+  border-radius:14px;
+  background:linear-gradient(135deg, rgba(43,246,126,.18), rgba(43,246,126,.05));
+  border:1px solid var(--border-strong);
+  display:grid; place-items:center;
+  color:var(--accent);
+  flex-shrink:0;
+}
+.product-thumb svg{ width:32px; height:32px; }
+.product-info h3{ margin:.15rem 0 .3rem; font-size:1.05rem; line-height:1.3; }
+.product-info p{ margin:0; font-size:.85rem; color:var(--muted); }
+
+.summary-row{
+  display:flex; justify-content:space-between; align-items:baseline;
+  padding:.55rem 0;
+  font-size:.9rem;
+  color:var(--muted);
+}
+.summary-row.total{
+  padding-top:1.1rem;
+  margin-top:.4rem;
+  border-top:1px solid var(--border);
+  color:var(--text);
+  font-size:1rem;
+  font-weight:600;
+}
+.summary-row.total .amount{
+  font-size:1.6rem;
+  color:var(--accent);
+  font-weight:800;
+  letter-spacing:-.01em;
+}
+
+.trust-list{
+  margin:1.6rem 0 0;
+  padding:0;
+  list-style:none;
+  display:grid;
+  gap:.7rem;
+}
+.trust-list li{
+  display:flex; align-items:center; gap:.6rem;
+  font-size:.82rem;
+  color:var(--muted);
+}
+.trust-list svg{ width:16px; height:16px; color:var(--accent); flex-shrink:0; }
+
+/* ============ Panel de pago ============ */
+.payment{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:1.8rem;
+  box-shadow:var(--shadow);
+}
+.payment h1{
+  margin:0 0 .3rem;
+  font-size:clamp(1.3rem, 2.4vw, 1.6rem);
+  letter-spacing:-.01em;
+}
+.payment .sub{
+  margin:0 0 1.6rem;
+  color:var(--muted);
+  font-size:.92rem;
+}
+
+/* ============ Tabs de método de pago ============ */
+.tabs{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0,1fr));
+  gap:.5rem;
+  background:var(--bg-soft);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:.35rem;
+  margin-bottom:1.6rem;
+}
+.tab{
+  background:transparent;
+  border:0;
+  padding:.85rem .5rem;
+  border-radius:10px;
+  color:var(--muted);
+  font-size:.82rem;
+  font-weight:600;
+  letter-spacing:.01em;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:.4rem;
+  transition:background .25s ease, color .25s ease;
+}
+.tab svg{ width:20px; height:20px; }
+.tab[aria-selected="true"]{
+  background:var(--accent);
+  color:var(--accent-ink);
+  box-shadow:0 8px 24px -8px var(--glow);
+}
+.tab:not([aria-selected="true"]):hover{ color:var(--text); background:var(--panel-hover); }
+
+/* ============ Formularios ============ */
+.field{
+  margin-bottom:1.05rem;
+}
+.field label{
+  display:block;
+  font-size:.78rem;
+  color:var(--muted);
+  margin-bottom:.4rem;
+  letter-spacing:.02em;
+  font-weight:500;
+}
+.field .required{ color:var(--accent); }
+
+.input, .select, .textarea{
+  width:100%;
+  padding:.9rem 1rem;
+  background:var(--bg-soft);
+  border:1px solid var(--border-strong);
+  border-radius:12px;
+  color:var(--text);
+  font-size:.95rem;
+  transition:border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.input:focus, .select:focus, .textarea:focus{
+  outline:none;
+  border-color:var(--accent);
+  background:#0d1210;
+  box-shadow:0 0 0 3px rgba(43,246,126,.15);
+}
+.select{ appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239ba4a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>"); background-repeat:no-repeat; background-position:right 1rem center; background-size:16px; padding-right:2.6rem; }
+.textarea{ resize:vertical; min-height:100px; }
+
+.row{ display:grid; grid-template-columns:1fr 1fr; gap:.9rem; }
+.row.thirds{ grid-template-columns:2fr 1fr 1fr; }
+@media (max-width:520px){
+  .row{ grid-template-columns:1fr; }
+  .row.thirds{ grid-template-columns:1fr; }
+}
+
+/* ============ Tarjeta visual ============ */
+.card-preview{
+  position:relative;
+  aspect-ratio:1.6/1;
+  max-width:340px;
+  margin:0 auto 1.6rem;
+  border-radius:18px;
+  padding:1.3rem;
+  background:linear-gradient(135deg, #0f2318 0%, #04180c 100%);
+  border:1px solid var(--border-strong);
+  overflow:hidden;
+  box-shadow:0 20px 60px -20px rgba(43,246,126,.25);
+}
+.card-preview::before{
+  content:""; position:absolute; top:-40%; right:-30%;
+  width:220px; height:220px;
+  background:radial-gradient(circle, rgba(43,246,126,.35), transparent 60%);
+  filter:blur(10px);
+}
+.card-brand-row{ display:flex; justify-content:space-between; align-items:center; position:relative; z-index:1; }
+.card-chip{
+  width:38px; height:28px;
+  border-radius:6px;
+  background:linear-gradient(135deg, #c8a556, #8a6d2c);
+  position:relative;
+}
+.card-chip::after{
+  content:""; position:absolute; inset:5px;
+  border:1px solid rgba(255,255,255,.25);
+  border-radius:3px;
+}
+.card-brand-logo{ font-size:.72rem; color:var(--muted); letter-spacing:.15em; text-transform:uppercase; }
+.card-number{
+  margin-top:2rem;
+  font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace;
+  font-size:clamp(1.05rem, 3vw, 1.4rem);
+  letter-spacing:.15em;
+  position:relative; z-index:1;
+}
+.card-bottom{
+  display:flex; justify-content:space-between;
+  margin-top:1.4rem;
+  font-size:.72rem;
+  color:var(--muted);
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  position:relative; z-index:1;
+}
+.card-bottom strong{ display:block; margin-top:.2rem; color:var(--text); font-weight:500; letter-spacing:.05em; text-transform:none; font-size:.9rem; }
+
+.brand-strip{ display:flex; gap:.5rem; align-items:center; margin-bottom:1rem; }
+.brand-strip img{ height:22px; opacity:.8; }
+.brand-badge{
+  padding:.3rem .6rem;
+  border-radius:6px;
+  background:var(--bg-soft);
+  border:1px solid var(--border);
+  font-size:.7rem;
+  color:var(--muted);
+  letter-spacing:.06em;
+  font-weight:700;
+}
+
+/* ============ Dropzone comprobante ============ */
+.dropzone{
+  border:2px dashed var(--border-strong);
+  border-radius:14px;
+  padding:2rem 1.2rem;
+  text-align:center;
+  cursor:pointer;
+  transition:border-color .25s ease, background .25s ease;
+}
+.dropzone:hover, .dropzone.drag{
+  border-color:var(--accent);
+  background:rgba(43,246,126,.05);
+}
+.dropzone svg{ width:34px; height:34px; margin:0 auto .8rem; color:var(--muted); }
+.dropzone .dz-title{ font-weight:600; margin-bottom:.3rem; }
+.dropzone .dz-hint{ font-size:.82rem; color:var(--muted); }
+.dropzone.has-file{
+  border-color:var(--accent);
+  background:rgba(43,246,126,.06);
+  text-align:left;
+}
+.dropzone.has-file svg{ color:var(--accent); }
+.dz-filename{ color:var(--accent); font-weight:600; word-break:break-all; }
+.dz-hint-mandatory{
+  margin-top:.8rem;
+  padding:.7rem 1rem;
+  background:rgba(43,246,126,.08);
+  border:1px solid rgba(43,246,126,.25);
+  border-radius:10px;
+  font-size:.82rem;
+  color:var(--text);
+  display:flex; align-items:flex-start; gap:.5rem;
+}
+.dz-hint-mandatory svg{ width:16px; height:16px; margin:2px 0 0; color:var(--accent); flex-shrink:0; }
+
+/* ============ Cuentas bancarias ============ */
+.accounts{
+  display:grid; gap:.7rem;
+  margin:1rem 0 1.5rem;
+}
+.account{
+  padding:1rem 1.1rem;
+  background:var(--bg-soft);
+  border:1px solid var(--border);
+  border-radius:12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:1rem;
+}
+.account-info{ display:flex; flex-direction:column; gap:.15rem; min-width:0; }
+.account-name{ font-weight:600; font-size:.92rem; }
+.account-meta{ font-size:.78rem; color:var(--muted); }
+.account-number{
+  font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace;
+  font-size:.9rem;
+  color:var(--text);
+  letter-spacing:.02em;
+}
+.copy-btn{
+  background:transparent;
+  border:1px solid var(--border-strong);
+  color:var(--text);
+  padding:.5rem .7rem;
+  border-radius:8px;
+  font-size:.78rem;
+  display:inline-flex; align-items:center; gap:.35rem;
+  transition:background .2s ease, border-color .2s ease;
+  flex-shrink:0;
+}
+.copy-btn:hover{ background:var(--panel-hover); border-color:var(--accent); color:var(--accent); }
+.copy-btn svg{ width:14px; height:14px; }
+.copy-btn.copied{ color:var(--accent); border-color:var(--accent); }
+
+/* ============ Botón CTA ============ */
+.pay-btn{
+  width:100%;
+  padding:1.1rem 1.5rem;
+  background:var(--accent);
+  color:var(--accent-ink);
+  border:0;
+  border-radius:14px;
+  font-weight:700;
+  font-size:1rem;
+  letter-spacing:.01em;
+  display:flex; justify-content:center; align-items:center; gap:.6rem;
+  box-shadow:0 15px 35px -12px var(--glow);
+  transition:transform .2s ease, box-shadow .2s ease, opacity .2s ease;
+  margin-top:.5rem;
+}
+.pay-btn:hover{ transform:translateY(-2px); box-shadow:0 20px 40px -12px var(--glow); }
+.pay-btn:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
+.pay-btn svg{ width:18px; height:18px; }
+
+.legal-note{
+  margin-top:1rem;
+  text-align:center;
+  font-size:.72rem;
+  color:var(--muted);
+  line-height:1.5;
+}
+
+/* ============ Panels de tabs ============ */
+.tab-panel{ display:none; animation:fadeIn .3s ease; }
+.tab-panel.active{ display:block; }
+@keyframes fadeIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+
+/* ============ Modal ============ */
+.modal{
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.7);
+  backdrop-filter:blur(6px);
+  display:none;
+  place-items:center;
+  z-index:100;
+  padding:1rem;
+}
+.modal.open{ display:grid; }
+.modal-content{
+  background:var(--bg-soft);
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius-lg);
+  padding:2.5rem 2rem;
+  max-width:440px;
+  width:100%;
+  text-align:center;
+  animation:fadeIn .3s ease;
+}
+.modal-icon{
+  width:64px; height:64px;
+  border-radius:50%;
+  background:var(--accent);
+  color:var(--accent-ink);
+  display:grid; place-items:center;
+  margin:0 auto 1.2rem;
+  box-shadow:0 15px 40px -8px var(--glow);
+}
+.modal-icon svg{ width:34px; height:34px; }
+.modal-content h3{ margin:0 0 .6rem; font-size:1.3rem; }
+.modal-content p{ margin:0 0 1.5rem; color:var(--muted); }
+.modal-btn{
+  padding:.9rem 1.6rem;
+  background:var(--accent);
+  color:var(--accent-ink);
+  border:0;
+  border-radius:12px;
+  font-weight:700;
+  font-size:.92rem;
+  display:inline-flex; align-items:center; gap:.4rem;
+}
+
+/* ============ Footer ============ */
+.site-footer{
+  position:relative; z-index:1;
+  padding:1.5rem clamp(1rem, 4vw, 3rem);
+  border-top:1px solid var(--border);
+  display:flex;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:1rem;
+  align-items:center;
+  font-size:.78rem;
+  color:var(--muted);
+}
+.footer-badges{ display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
+.footer-badges span{ display:inline-flex; align-items:center; gap:.35rem; }
+.footer-badges svg{ width:14px; height:14px; color:var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<header class="site-header">
+  <div class="brand">
+    <span class="brand-mark">N</span>
+    <span>NovaBot · Pago</span>
+  </div>
+  <div class="secure-badge">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    Conexión segura SSL
+  </div>
+</header>
+
+<!-- ============ CONTENIDO ============ -->
+<main class="wrap">
+
+  <!-- ------- Resumen del producto ------- -->
+  <aside class="summary">
+    <h2>Resumen de tu compra</h2>
+    <div class="product">
+      <div class="product-thumb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/><path d="M12 12v3"/><path d="M9 15h6"/></svg>
+      </div>
+      <div class="product-info">
+        <h3 id="p-nombre">NovaBot Trading Bot</h3>
+        <p id="p-desc">Bot de trading automatizado + capacitación</p>
+      </div>
+    </div>
+
+    <div class="summary-row">
+      <span>Subtotal</span>
+      <span id="p-subtotal">$100.000</span>
+    </div>
+    <div class="summary-row">
+      <span>Envío</span>
+      <span style="color:var(--accent)">Entrega digital</span>
+    </div>
+    <div class="summary-row total">
+      <span>Total a pagar</span>
+      <span class="amount" id="p-total">$100.000 COP</span>
+    </div>
+
+    <ul class="trust-list">
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        Pagos procesados por pasarela autorizada por la Superintendencia Financiera
+      </li>
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        Entrega del archivo inmediata tras confirmación
+      </li>
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        Soporte por WhatsApp incluido
+      </li>
+    </ul>
+  </aside>
+
+  <!-- ------- Panel de pago ------- -->
+  <section class="payment">
+    <h1>Elige tu método de pago</h1>
+    <p class="sub">Todos los pagos están protegidos por cifrado SSL de extremo a extremo.</p>
+
+    <!-- Tabs -->
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-tab="pse">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V10l7-6 7 6v11"/><path d="M9 21v-6h6v6"/></svg>
+        PSE
+      </button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="tarjeta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        Tarjeta
+      </button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="comprobante">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Comprobante
+      </button>
+    </div>
+
+    <!-- =============== TAB PSE =============== -->
+    <div class="tab-panel active" data-panel="pse">
+      <form id="form-pse" autocomplete="on">
+        <div class="field">
+          <label>Selecciona tu banco <span class="required">*</span></label>
+          <select class="select" name="banco" required>
+            <option value="">Elige un banco...</option>
+            <!-- Bancos PSE Colombia -->
+            <option>Bancolombia</option>
+            <option>Banco de Bogotá</option>
+            <option>Davivienda</option>
+            <option>BBVA Colombia</option>
+            <option>Banco Popular</option>
+            <option>Scotiabank Colpatria</option>
+            <option>Banco AV Villas</option>
+            <option>Banco Caja Social</option>
+            <option>Banco Falabella</option>
+            <option>Banco Pichincha</option>
+            <option>Banco Serfinanza</option>
+            <option>Banco Cooperativo Coopcentral</option>
+            <option>Banco de Occidente</option>
+            <option>Banco Finandina</option>
+            <option>Banco GNB Sudameris</option>
+            <option>Banco Itaú</option>
+            <option>Banco Mundo Mujer</option>
+            <option>Bancoomeva</option>
+            <option>Banco W</option>
+            <option>Banco Agrario</option>
+            <option>Nequi</option>
+            <option>Daviplata</option>
+            <option>RappiPay</option>
+            <option>Movii</option>
+            <option>Citibank Colombia</option>
+            <option>JP Morgan Colombia</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Tipo de documento <span class="required">*</span></label>
+            <select class="select" name="tipoDoc" required>
+              <option value="CC">Cédula de ciudadanía</option>
+              <option value="CE">Cédula de extranjería</option>
+              <option value="NIT">NIT</option>
+              <option value="PP">Pasaporte</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Número de documento <span class="required">*</span></label>
+            <input class="input" type="text" name="numDoc" inputmode="numeric" pattern="[0-9]+" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Nombre completo <span class="required">*</span></label>
+          <input class="input" type="text" name="nombre" autocomplete="name" required>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Correo electrónico <span class="required">*</span></label>
+            <input class="input" type="email" name="email" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <label>Celular <span class="required">*</span></label>
+            <input class="input" type="tel" name="telefono" autocomplete="tel" placeholder="300 123 4567" required>
+          </div>
+        </div>
+
+        <button type="submit" class="pay-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Pagar <span id="btn-pse-monto">$100.000</span> con PSE
+        </button>
+        <p class="legal-note">Serás redirigido al portal seguro de PSE para autorizar la transferencia desde tu banco.</p>
+      </form>
+    </div>
+
+    <!-- =============== TAB TARJETA =============== -->
+    <div class="tab-panel" data-panel="tarjeta">
+      <div class="brand-strip">
+        <span class="brand-badge">VISA</span>
+        <span class="brand-badge">MASTERCARD</span>
+        <span class="brand-badge">AMEX</span>
+        <span class="brand-badge">DINERS</span>
+      </div>
+
+      <div class="card-preview" aria-hidden="true">
+        <div class="card-brand-row">
+          <div class="card-chip"></div>
+          <div class="card-brand-logo" id="cp-brand">Tarjeta</div>
+        </div>
+        <div class="card-number" id="cp-number">•••• •••• •••• ••••</div>
+        <div class="card-bottom">
+          <div>
+            Titular
+            <strong id="cp-name">NOMBRE APELLIDO</strong>
+          </div>
+          <div>
+            Vence
+            <strong id="cp-exp">MM/AA</strong>
+          </div>
+        </div>
+      </div>
+
+      <form id="form-tarjeta" autocomplete="on">
+        <div class="field">
+          <label>Número de tarjeta <span class="required">*</span></label>
+          <input class="input" type="text" name="numero" inputmode="numeric" autocomplete="cc-number" maxlength="19" placeholder="0000 0000 0000 0000" required>
+        </div>
+        <div class="row thirds">
+          <div class="field">
+            <label>Titular como aparece en la tarjeta <span class="required">*</span></label>
+            <input class="input" type="text" name="titular" autocomplete="cc-name" required>
+          </div>
+          <div class="field">
+            <label>Vencimiento <span class="required">*</span></label>
+            <input class="input" type="text" name="vencimiento" inputmode="numeric" autocomplete="cc-exp" maxlength="5" placeholder="MM/AA" required>
+          </div>
+          <div class="field">
+            <label>CVV <span class="required">*</span></label>
+            <input class="input" type="text" name="cvv" inputmode="numeric" autocomplete="cc-csc" maxlength="4" placeholder="123" required>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Tipo de documento <span class="required">*</span></label>
+            <select class="select" name="tipoDoc" required>
+              <option value="CC">CC</option>
+              <option value="CE">CE</option>
+              <option value="NIT">NIT</option>
+              <option value="PP">PP</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Número de documento <span class="required">*</span></label>
+            <input class="input" type="text" name="numDoc" inputmode="numeric" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Cuotas</label>
+          <select class="select" name="cuotas">
+            <option value="1">1 cuota (sin intereses)</option>
+            <option value="3">3 cuotas</option>
+            <option value="6">6 cuotas</option>
+            <option value="12">12 cuotas</option>
+            <option value="18">18 cuotas</option>
+            <option value="24">24 cuotas</option>
+            <option value="36">36 cuotas</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Correo electrónico <span class="required">*</span></label>
+          <input class="input" type="email" name="email" autocomplete="email" required>
+        </div>
+
+        <button type="submit" class="pay-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Pagar <span id="btn-card-monto">$100.000</span> con tarjeta
+        </button>
+        <p class="legal-note">Los datos de tu tarjeta se procesan en el entorno certificado PCI-DSS de la pasarela. Nosotros nunca los almacenamos.</p>
+      </form>
+    </div>
+
+    <!-- =============== TAB COMPROBANTE =============== -->
+    <div class="tab-panel" data-panel="comprobante">
+      <p style="margin:0 0 1rem; color:var(--muted); font-size:.9rem;">
+        Realiza la transferencia a una de nuestras cuentas y adjunta la captura del comprobante para activar tu bot en menos de 30 minutos.
+      </p>
+
+      <div class="accounts" id="accounts-list">
+        <!-- Se rellenan por JS desde CONFIG.cuentasRecepcion -->
+      </div>
+
+      <!--
+        FormSubmit.co envía el formulario a tu correo con el archivo adjunto.
+        La primera vez que envíes un comprobante recibirás un email de FormSubmit
+        pidiéndote confirmar tu correo. Confirmas una sola vez y listo.
+      -->
+      <form id="form-comprobante" enctype="multipart/form-data" method="POST">
+        <input type="hidden" name="_subject" value="Nuevo comprobante de pago — NovaBot">
+        <input type="hidden" name="_captcha" value="false">
+        <input type="hidden" name="_template" value="table">
+
+        <div class="field">
+          <label>Nombre completo <span class="required">*</span></label>
+          <input class="input" type="text" name="nombre" autocomplete="name" required>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Correo electrónico <span class="required">*</span></label>
+            <input class="input" type="email" name="email" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <label>WhatsApp <span class="required">*</span></label>
+            <input class="input" type="tel" name="whatsapp" autocomplete="tel" placeholder="300 123 4567" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Banco desde donde transferiste</label>
+          <input class="input" type="text" name="banco_origen" placeholder="Ej: Bancolombia, Nequi...">
+        </div>
+
+        <div class="field">
+          <label>Captura del comprobante <span class="required">*</span></label>
+          <div class="dropzone" id="dropzone">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div class="dz-title">Toca aquí o arrastra tu comprobante</div>
+            <div class="dz-hint">Imagen o PDF · Máx. 8 MB</div>
+          </div>
+          <input type="file" name="comprobante" id="file-input" accept="image/*,application/pdf" hidden required>
+          <div class="dz-hint-mandatory">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span><strong>Debes adjuntar el comprobante de pago</strong> para poder continuar. Sin él no podremos verificar tu transferencia ni entregar el archivo del bot.</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Mensaje (opcional)</label>
+          <textarea class="textarea" name="mensaje" placeholder="Cuéntanos si tuviste algún inconveniente o si tienes alguna pregunta..."></textarea>
+        </div>
+
+        <button type="submit" class="pay-btn" id="btn-comprobante">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>
+          Enviar comprobante
+        </button>
+        <p class="legal-note">
+          Verificamos manualmente cada comprobante. Recibirás el bot en tu correo apenas confirmemos el pago.
+        </p>
+      </form>
+    </div>
+  </section>
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer class="site-footer">
+  <div>© <span id="anio"></span> NovaBot · Todos los derechos reservados</div>
+  <div class="footer-badges">
+    <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>SSL 256-bit</span>
+    <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>PCI-DSS</span>
+    <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Superintendencia Financiera</span>
+  </div>
+</footer>
+
+<!-- ============ MODAL DE ÉXITO ============ -->
+<div class="modal" id="modal-ok">
+  <div class="modal-content">
+    <div class="modal-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+    </div>
+    <h3 id="modal-title">¡Comprobante enviado!</h3>
+    <p id="modal-msg">Ya verificamos tu transferencia. En menos de 30 minutos recibirás el bot en tu correo.</p>
+    <button class="modal-btn" id="modal-close">Entendido</button>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   LÓGICA DE LA PÁGINA
+   ========================================================= */
+(() => {
+  const CFG = window.CONFIG;
+
+  /* ---------- Utilidades ---------- */
+  const $ = s => document.querySelector(s);
+  const $$ = s => document.querySelectorAll(s);
+  const fmt = n => '$' + Number(n).toLocaleString('es-CO');
+
+  /* ---------- Rellena el resumen y montos ---------- */
+  $('#p-nombre').textContent = CFG.producto.nombre;
+  $('#p-desc').textContent   = CFG.producto.descripcion;
+  $('#p-subtotal').textContent = fmt(CFG.producto.precioCOP);
+  $('#p-total').textContent    = fmt(CFG.producto.precioCOP) + ' COP';
+  $('#btn-pse-monto').textContent  = fmt(CFG.producto.precioCOP);
+  $('#btn-card-monto').textContent = fmt(CFG.producto.precioCOP);
+  $('#anio').textContent = new Date().getFullYear();
+  document.title = 'Pago seguro · ' + CFG.producto.nombre;
+
+  /* ---------- Rellena cuentas bancarias ---------- */
+  const accIcons = {
+    bancolombia: '#f7e246',
+    nequi:       '#8a3ffc',
+    daviplata:   '#e60000'
+  };
+  const accNames = {
+    bancolombia: 'Bancolombia',
+    nequi:       'Nequi',
+    daviplata:   'Daviplata'
+  };
+  const accList = $('#accounts-list');
+  Object.entries(CFG.cuentasRecepcion).forEach(([key, data]) => {
+    const el = document.createElement('div');
+    el.className = 'account';
+    el.innerHTML = `
+      <div class="account-info">
+        <div class="account-name" style="color:${accIcons[key] || '#fff'}">${accNames[key] || key}</div>
+        <div class="account-meta">${data.tipo ? data.tipo + ' · ' : ''}${data.titular}</div>
+        <div class="account-number">${data.numero}</div>
+      </div>
+      <button type="button" class="copy-btn" data-copy="${data.numero}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copiar
+      </button>
+    `;
+    accList.appendChild(el);
+  });
+
+  /* Copiar al portapapeles */
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.copy-btn');
+    if(!btn) return;
+    navigator.clipboard.writeText(btn.dataset.copy).then(() => {
+      btn.classList.add('copied');
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Copiado';
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.innerHTML = originalHTML;
+      }, 1800);
+    });
+  });
+
+  /* ---------- Tabs ---------- */
+  $$('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+      $$('.tab').forEach(t => t.setAttribute('aria-selected', t === tab ? 'true' : 'false'));
+      $$('.tab-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === target));
+    });
+  });
+
+  /* ---------- Preview de tarjeta ---------- */
+  const numberInput = $('#form-tarjeta [name=numero]');
+  const nameInput   = $('#form-tarjeta [name=titular]');
+  const expInput    = $('#form-tarjeta [name=vencimiento]');
+  const cpNumber = $('#cp-number');
+  const cpName   = $('#cp-name');
+  const cpExp    = $('#cp-exp');
+  const cpBrand  = $('#cp-brand');
+
+  function detectBrand(n){
+    n = n.replace(/\s/g, '');
+    if(/^4/.test(n))   return 'VISA';
+    if(/^(5[1-5]|2[2-7])/.test(n)) return 'MASTERCARD';
+    if(/^3[47]/.test(n)) return 'AMEX';
+    if(/^3(0[0-5]|[68])/.test(n)) return 'DINERS';
+    return 'Tarjeta';
+  }
+  numberInput.addEventListener('input', e => {
+    let v = e.target.value.replace(/\D/g, '').slice(0, 19);
+    v = v.replace(/(.{4})/g, '$1 ').trim();
+    e.target.value = v;
+    cpNumber.textContent = (v + '•••• •••• •••• ••••').replace(/[\d•]/g, (c, i) => {
+      return i < v.length ? c : (c === ' ' ? ' ' : '•');
+    }).slice(0, 19);
+    cpBrand.textContent = detectBrand(v);
+  });
+  nameInput.addEventListener('input', e => {
+    cpName.textContent = e.target.value.toUpperCase() || 'NOMBRE APELLIDO';
+  });
+  expInput.addEventListener('input', e => {
+    let v = e.target.value.replace(/\D/g, '').slice(0, 4);
+    if(v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
+    e.target.value = v;
+    cpExp.textContent = v || 'MM/AA';
+  });
+
+  /* ---------- Dropzone ---------- */
+  const dz = $('#dropzone');
+  const fileInput = $('#file-input');
+  const btnComp = $('#btn-comprobante');
+
+  dz.addEventListener('click', () => fileInput.click());
+  ['dragenter','dragover'].forEach(evt =>
+    dz.addEventListener(evt, e => { e.preventDefault(); dz.classList.add('drag'); })
+  );
+  ['dragleave','drop'].forEach(evt =>
+    dz.addEventListener(evt, e => { e.preventDefault(); dz.classList.remove('drag'); })
+  );
+  dz.addEventListener('drop', e => {
+    if(e.dataTransfer.files.length){
+      fileInput.files = e.dataTransfer.files;
+      onFile(e.dataTransfer.files[0]);
+    }
+  });
+  fileInput.addEventListener('change', e => {
+    if(e.target.files[0]) onFile(e.target.files[0]);
+  });
+
+  function onFile(file){
+    if(file.size > 8 * 1024 * 1024){
+      alert('El archivo supera los 8 MB. Por favor comprímelo o elige otro.');
+      fileInput.value = '';
+      return;
+    }
+    dz.classList.add('has-file');
+    dz.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>
+      <div class="dz-title dz-filename">${file.name}</div>
+      <div class="dz-hint">${(file.size/1024).toFixed(0)} KB · toca para cambiar</div>
+    `;
+  }
+
+  /* ---------- Envío del formulario de comprobante ----------
+     Va a FormSubmit.co para llegar como email al vendedor. */
+  $('#form-comprobante').setAttribute(
+    'action',
+    'https://formsubmit.co/' + encodeURIComponent(CFG.formSubmitEmail)
+  );
+  $('#form-comprobante').addEventListener('submit', () => {
+    // Añade el producto como campo oculto al enviar
+    const hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    hidden.name = 'producto';
+    hidden.value = CFG.producto.nombre + ' — ' + fmt(CFG.producto.precioCOP) + ' COP';
+    $('#form-comprobante').appendChild(hidden);
+    btnComp.disabled = true;
+    btnComp.innerHTML = 'Enviando...';
+  });
+
+  /* ---------- Envío PSE / Tarjeta a Wompi ----------
+     Wompi Web Checkout acepta datos del comprador pre-cargados por URL.
+     El cliente completa el pago en el entorno certificado de Wompi y
+     Wompi enruta el dinero a tu cuenta bancaria configurada. */
+  async function sha256Hex(msg){
+    const buf = new TextEncoder().encode(msg);
+    const hash = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(hash))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function referencia(){
+    return 'NB-' + Date.now().toString(36).toUpperCase();
+  }
+
+  async function irAWompi(datos){
+    const ref = referencia();
+    const amount = CFG.producto.precioCOP * 100; // Wompi usa centavos
+    const currency = 'COP';
+    const signature = await sha256Hex(ref + amount + currency + CFG.wompi.llaveIntegridad);
+
+    /* Si prefieres Mercado Pago y configuraste un link fijo, se usa ese */
+    if(CFG.mercadoPagoLinkPago && CFG.mercadoPagoLinkPago.startsWith('http')){
+      window.location.href = CFG.mercadoPagoLinkPago;
+      return;
+    }
+
+    const params = new URLSearchParams({
+      'public-key':          CFG.wompi.llavePublica,
+      'currency':            currency,
+      'amount-in-cents':     amount,
+      'reference':           ref,
+      'signature:integrity': signature,
+      'redirect-url':        CFG.wompi.urlRedireccion,
+      'customer-data:email':          datos.email || '',
+      'customer-data:full-name':      datos.nombre || '',
+      'customer-data:phone-number':   (datos.telefono || '').replace(/\s/g,''),
+      'customer-data:legal-id':       datos.numDoc || '',
+      'customer-data:legal-id-type':  datos.tipoDoc || 'CC'
+    });
+    window.location.href = 'https://checkout.wompi.co/p/?' + params.toString();
+  }
+
+  function datosFormulario(form){
+    const fd = new FormData(form);
+    const obj = {};
+    fd.forEach((v, k) => obj[k] = v);
+    return obj;
+  }
+
+  $('#form-pse').addEventListener('submit', e => {
+    e.preventDefault();
+    if(CFG.wompi.llavePublica.includes('TU_LLAVE') && !CFG.mercadoPagoLinkPago){
+      alert('Aún no has configurado las llaves de Wompi. Edita window.CONFIG.wompi en el HTML.');
+      return;
+    }
+    irAWompi(datosFormulario(e.target));
+  });
+
+  $('#form-tarjeta').addEventListener('submit', e => {
+    e.preventDefault();
+    if(CFG.wompi.llavePublica.includes('TU_LLAVE') && !CFG.mercadoPagoLinkPago){
+      alert('Aún no has configurado las llaves de Wompi. Edita window.CONFIG.wompi en el HTML.');
+      return;
+    }
+    irAWompi(datosFormulario(e.target));
+  });
+
+  /* ---------- Modal ---------- */
+  $('#modal-close').addEventListener('click', () => $('#modal-ok').classList.remove('open'));
+
+  /* Si la URL trae parámetros de FormSubmit (?success=true) mostramos modal */
+  const usp = new URLSearchParams(location.search);
+  if(usp.get('success') === 'true' || usp.get('estado') === 'comprobante_ok'){
+    $('#modal-ok').classList.add('open');
+  }
+})();
+</script>
+</body>
+</html>

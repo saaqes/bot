@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#050606">
+<title>Entrega · NovaBot</title>
+
+<script>
+window.CONFIG = {
+  /* URL del archivo del bot — súbelo a Google Drive, Dropbox, tu hosting
+     y pega el enlace directo aquí */
+  urlArchivo: 'https://drive.google.com/uc?export=download&id=TU_ID_DEL_ARCHIVO',
+
+  /* WhatsApp de soporte (sin +) */
+  whatsappNumero: '573052430458',
+
+  /* Llave PÚBLICA de Wompi para verificar el estado en su API pública */
+  wompiLlavePublica: 'pub_prod_TU_LLAVE_PUBLICA_AQUI'
+};
+</script>
+
+<style>
+:root{
+  --bg:#050606; --panel:rgba(255,255,255,.03); --border:rgba(255,255,255,.1);
+  --text:#f2f5f3; --muted:#9ba4a0; --accent:#2bf67e; --accent-ink:#04180c;
+  --glow:rgba(43,246,126,.35);
+}
+*,*::before,*::after{ box-sizing:border-box; }
+body{
+  margin:0; min-height:100vh;
+  background:var(--bg); color:var(--text);
+  font-family:'Inter', system-ui, sans-serif; line-height:1.5;
+  display:grid; place-items:center; padding:1.5rem;
+}
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(43,246,126,.08), transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(43,246,126,.05), transparent 50%);
+}
+.card{
+  position:relative;
+  max-width:520px; width:100%;
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:24px; padding:2.5rem 2rem;
+  box-shadow:0 30px 80px -20px rgba(0,0,0,.7);
+  text-align:center;
+}
+.icon{
+  width:76px; height:76px; border-radius:50%;
+  background:var(--accent); color:var(--accent-ink);
+  margin:0 auto 1.5rem;
+  display:grid; place-items:center;
+  box-shadow:0 20px 50px -10px var(--glow);
+  animation:pop .5s cubic-bezier(.34,1.5,.5,1);
+}
+@keyframes pop{ from{ transform:scale(.3); opacity:0; } to{ transform:scale(1); opacity:1; } }
+.icon svg{ width:40px; height:40px; }
+h1{ margin:0 0 .6rem; font-size:1.6rem; letter-spacing:-.01em; }
+.sub{ color:var(--muted); margin:0 0 2rem; font-size:.98rem; }
+.download{
+  display:inline-flex; align-items:center; gap:.6rem;
+  padding:1.2rem 1.8rem;
+  background:var(--accent); color:var(--accent-ink);
+  text-decoration:none; font-weight:700;
+  border-radius:14px; font-size:1rem;
+  box-shadow:0 15px 40px -10px var(--glow);
+  transition:transform .2s ease, box-shadow .2s ease;
+}
+.download:hover{ transform:translateY(-2px); box-shadow:0 20px 45px -10px var(--glow); }
+.download svg{ width:20px; height:20px; }
+.tip{
+  margin-top:1.6rem; font-size:.82rem; color:var(--muted);
+  padding-top:1.4rem; border-top:1px dashed var(--border);
+}
+.tip a{ color:var(--accent); }
+.state{ margin-top:1.5rem; padding:1rem; border-radius:12px; font-size:.9rem; }
+.state.pending{ background:rgba(255,196,0,.08); border:1px solid rgba(255,196,0,.3); color:#ffd166; }
+.state.declined{ background:rgba(255,92,92,.08); border:1px solid rgba(255,92,92,.3); color:#ff8a8a; }
+.spinner{
+  width:32px; height:32px; margin:0 auto 1rem;
+  border:3px solid var(--border); border-top-color:var(--accent);
+  border-radius:50%; animation:spin 1s linear infinite;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+.hidden{ display:none !important; }
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+
+  <!-- Estado: verificando -->
+  <div id="state-loading">
+    <div class="spinner"></div>
+    <h1>Verificando tu pago...</h1>
+    <p class="sub">Consultando el estado con la pasarela, no cierres esta ventana.</p>
+  </div>
+
+  <!-- Estado: aprobado -->
+  <div id="state-ok" class="hidden">
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+    </div>
+    <h1>¡Pago aprobado!</h1>
+    <p class="sub">Tu compra fue confirmada. Descarga el bot y sigue las instrucciones que enviamos a tu correo para instalarlo.</p>
+    <a class="download" id="download-link" href="#" download>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Descargar el bot
+    </a>
+    <p class="tip">¿Necesitas ayuda con la instalación? <a id="wa-link" href="#" target="_blank" rel="noopener">Escríbenos por WhatsApp</a></p>
+  </div>
+
+  <!-- Estado: pendiente -->
+  <div id="state-pending" class="hidden">
+    <h1>Pago pendiente</h1>
+    <div class="state pending">
+      Tu banco aún está procesando la transferencia. Puede tomar unos minutos.
+      Te enviaremos el bot a tu correo apenas se confirme.
+    </div>
+    <p class="tip">¿Dudas? <a id="wa-link-2" href="#" target="_blank" rel="noopener">Escríbenos por WhatsApp</a></p>
+  </div>
+
+  <!-- Estado: rechazado / error -->
+  <div id="state-declined" class="hidden">
+    <h1>El pago no se completó</h1>
+    <div class="state declined" id="declined-reason">Tu banco rechazó la transacción.</div>
+    <p class="tip">Puedes intentarlo de nuevo o <a id="wa-link-3" href="#" target="_blank" rel="noopener">escribirnos por WhatsApp</a> para ayudarte.</p>
+  </div>
+
+</div>
+
+<script>
+(async () => {
+  const CFG = window.CONFIG;
+  const usp = new URLSearchParams(location.search);
+  const txId = usp.get('id') || usp.get('transactionId');
+
+  // Enlaces de WhatsApp con mensaje pre-cargado
+  const waMsg = encodeURIComponent('Hola, acabo de pagar el bot y necesito ayuda.');
+  ['wa-link','wa-link-2','wa-link-3'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.href = `https://wa.me/${CFG.whatsappNumero}?text=${waMsg}`;
+  });
+
+  const show = id => {
+    ['state-loading','state-ok','state-pending','state-declined']
+      .forEach(k => document.getElementById(k).classList.toggle('hidden', k !== id));
+  };
+
+  // Si no hay transaction id (visita directa), asumimos flujo manual → mostramos OK
+  if(!txId){
+    show('state-ok');
+    document.getElementById('download-link').href = CFG.urlArchivo;
+    return;
+  }
+
+  // Consulta el estado real en la API pública de Wompi
+  try {
+    const res = await fetch(`https://production.wompi.co/v1/transactions/${encodeURIComponent(txId)}`);
+    const json = await res.json();
+    const status = json?.data?.status;
+
+    if(status === 'APPROVED'){
+      show('state-ok');
+      document.getElementById('download-link').href = CFG.urlArchivo;
+    } else if(status === 'PENDING'){
+      show('state-pending');
+    } else {
+      show('state-declined');
+      const reason = json?.data?.status_message || 'Tu banco rechazó la transacción.';
+      document.getElementById('declined-reason').textContent = reason;
+    }
+  } catch(err) {
+    // Fallback: si la consulta falla, mostramos pendiente (nunca el archivo sin confirmar)
+    show('state-pending');
+  }
+})();
+</script>
+</body>
+</html>
